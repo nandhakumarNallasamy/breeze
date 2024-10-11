@@ -73,21 +73,20 @@ def generate_contarcts(stock_code, expiry_date, start_strike, end_strike, interv
 def clear():
     clear_output(wait=True)    
 
-def place_fno_order(contract, action, quantity, split = 0, price="0"):
-    try:
-        i = 0
-        while i < split:
+def place_fno_order(contract, action, quantity, count=1, price="0"):
+    def place_single_order(contract, action, quantity, price):
+        try:
             response = breeze.place_order(
                 stock_code=contract.stock_code,
                 exchange_code=contract.exchange_code,
                 product=contract.product_type,
                 action=action,
-                order_type = ("market" if price == "0" else "limit"),
+                order_type=("market" if price == "0" else "limit"),
                 stoploss="",
-                quantity=quantity/split,
+                quantity=quantity,
                 price=price,
                 validity="day",
-                validity_date=current_date,
+                validity_date=get_iso_date(get_ist_time()),
                 disclosed_quantity="0",
                 expiry_date=contract.expiry_date,
                 right=contract.right,
@@ -97,11 +96,28 @@ def place_fno_order(contract, action, quantity, split = 0, price="0"):
                 logger.info(f"{contract.shorthand}-{action} order successful.")
             else:
                 logger.error(f"{contract.shorthand}-{action} order failed.")
-            i += 1
-                
-    except Exception as e:
-        logger.error(f"Error in placing order: {e}")
-    return response
+                if response.get("Error") is not None:
+                    logger.error(f"Error details: {response.get('Error')}")
+            return response
+        except Exception as e:
+            logger.error(f"Error in placing order:{contract.shorthand}-{action} {e}")
+            return None
+
+    if count <= 1:
+        # If count is 1, just place the order directly without threading
+        return place_single_order(contract, action, quantity, price)
+    else:
+        # Use threading for count orders
+        threads = []
+        responses = []
+
+        for _ in range(count):
+            thread = threading.Thread(target=lambda: responses.append(place_single_order(contract, action, quantity, price)))
+            threads.append(thread)
+            thread.start()
+
+        for thread in threads:
+            thread.join()
 
 def get_price(contract):
     try:
@@ -123,16 +139,16 @@ def get_price(contract):
         logger.error(f"Error fetching {contract.shorthand} price: {e}")
         return None
 
-def place_hedge_order(contract1, contract2, quantity, split = 1):
+def place_hedge_order(contract1, contract2, quantity, count = 1):
     try:
         i = 0
-        while i < split:
-            response = place_fno_order(contract1, "buy", (quantity/split), price="0")
+        while i < count:
+            response = place_fno_order(contract1, "buy", (quantity), price="0")
             if response.get("Status") == 200 :
-                response = place_fno_order(contract2, "sell", (quantity/split), price="0")
+                response = place_fno_order(contract2, "sell", (quantity), price="0")
                 while response.get("Status") != 200 :
                     logger.info(f"Retrying...")
-                    response = place_fno_order(contract2, "sell", (quantity/split), price="0")
+                    response = place_fno_order(contract2, "sell", (quantity), price="0")
             else:
                 logger.info(f"Retrying...")
                 i -= 1
