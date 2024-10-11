@@ -1,0 +1,570 @@
+Setup virtual environment in your Machine
+You must install the virtualenv package via pip
+
+pip install virtualenv
+You should create breeze virtual environment via virtualenv
+
+virtualenv -p python3 breeze_venv
+And then, You can activate virtual environment via source
+
+source breeze_venv/bin/activate
+Installing the client
+You can install the latest release via pip
+
+pip install --upgrade breeze-connect
+Or, You can also install the specific release version via pip
+pip install breeze-connect==1.0.58
+API Usage
+from breeze_connect import BreezeConnect
+
+# Initialize SDK
+breeze = BreezeConnect(api_key="your_api_key")
+
+# Obtain your session key from https://api.icicidirect.com/apiuser/login?api_key=YOUR_API_KEY
+# Incase your api-key has special characters(like +,=,!) then encode the api key before using in the url as shown below.
+import urllib
+print("https://api.icicidirect.com/apiuser/login?api_key="+urllib.parse.quote_plus("your_api_key"))
+
+# Generate Session
+breeze.generate_session(api_secret="your_secret_key",
+                        session_token="your_api_session")
+
+# Generate ISO8601 Date/DateTime String
+import datetime
+iso_date_string = datetime.datetime.strptime("28/02/2021","%d/%m/%Y").isoformat()[:10] + 'T05:30:00.000Z'
+iso_date_time_string = datetime.datetime.strptime("28/02/2021 23:59:59","%d/%m/%Y %H:%M:%S").isoformat()[:19] + '.000Z'
+
+Websocket Usage
+from breeze_connect import BreezeConnect
+
+# Initialize SDK
+breeze = BreezeConnect(api_key="your_api_key")
+
+# Obtain your session key from https://api.icicidirect.com/apiuser/login?api_key=YOUR_API_KEY
+# Incase your api-key has special characters(like +,=,!) then encode the api key before using in the url as shown below.
+import urllib
+print("https://api.icicidirect.com/apiuser/login?api_key="+urllib.parse.quote_plus("your_api_key"))
+
+# Generate Session
+breeze.generate_session(api_secret="your_secret_key",
+                        session_token="your_api_session")
+
+# Connect to websocket(it will connect to tick-by-tick data server)
+breeze.ws_connect()
+
+# Callback to receive ticks.
+def on_ticks(ticks):
+    print("Ticks: {}".format(ticks))
+
+# Assign the callbacks.
+breeze.on_ticks = on_ticks
+
+# subscribe stocks feeds
+breeze.subscribe_feeds(exchange_code="NFO", stock_code="ZEEENT", product_type="options", expiry_date="31-Mar-2022", strike_price="350", right="Call", get_exchange_quotes=True, get_market_depth=False)
+
+# subscribe stocks feeds by stock-token
+breeze.subscribe_feeds(stock_token="1.1!500780")
+
+# unsubscribe stocks feeds
+breeze.unsubscribe_feeds(exchange_code="NFO", stock_code="ZEEENT", product_type="options", expiry_date="31-Mar-2022", strike_price="350", right="Call", get_exchange_quotes=True, get_market_depth=False)
+
+# unsubscribe stocks feeds by stock-token
+breeze.unsubscribe_feeds(stock_token="1.1!500780")
+
+# subscribe to Real Time Streaming OHLCV Data of stocks
+breeze.subscribe_feeds(exchange_code="NFO", stock_code="ZEEENT", product_type="options", expiry_date="31-Mar-2022", strike_price="350", right="Call", interval="1minute")
+
+# subscribe to Real Time Streaming OHLCV Data of stocks by stock-token
+breeze.subscribe_feeds(stock_token="1.1!500780",interval="1second")
+
+# unsubscribe to Real Time Streaming OHLCV Data of stocks
+breeze.unsubscribe_feeds(exchange_code="NFO", stock_code="ZEEENT", product_type="options", expiry_date="31-Mar-2022", strike_price="350", right="Call", interval="1minute")
+
+# unsubscribe to Real Time Streaming OHLCV Data of stocks by stock-token
+breeze.unsubscribe_feeds(stock_token="1.1!500780",interval="1second")
+
+# subscribe order notification feeds(it will connect to order streaming server)
+breeze.subscribe_feeds(get_order_notification=True)
+
+# unsubscribe order notification feeds(also it will disconnect the order streaming server)
+breeze.unsubscribe_feeds(get_order_notification=True)
+
+# subscribe oneclick strategy stream
+breeze.subscribe_feeds(stock_token = "one_click_fno")
+
+# unsubscribe oneclick strategy stream
+breeze.unsubscribe_feeds(stock_token = "one_click_fno")
+
+# subscribe oneclick equity strategy stream(i_click_2_gain)
+breeze.subscribe_feeds(stock_token = "i_click_2_gain")
+
+# unsubscribe oneclick equity strategy stream(i_click_2_gain)
+breeze.unsubscribe_feeds(stock_token = "i_click_2_gain")
+
+# ws_disconnect (it will disconnect from all actively connected servers)
+breeze.ws_disconnect()
+
+NOTE:
+
+Examples for stock_token are "4.1!38071" or "1.1!500780".
+
+Template for stock_token : X.Y! X : exchange code Y : Market Level data Token : ISEC stock code
+
+Value of X can be : 1 for BSE, 4 for NSE, 13 for NDX, 6 for MCX, 4 for NFO,
+
+Value of Y can be : 1 for Level 1 data, 2 for Level 2 data
+
+Token number can be obtained via get_names() function or downloading master security file via https://api.icicidirect.com/breezeapi/documents/index.html#instruments
+
+exchange_code must be 'BSE', 'NSE', 'NDX', 'MCX' or 'NFO'.
+
+stock_code should not be an empty string. Examples for stock_code are "WIPRO" or "ZEEENT".
+
+product_type can be either 'Futures', 'Options' or an empty string. Product_type can not be an empty string for exchange_code 'NDX', 'MCX' and 'NFO'.
+
+strike_date can be in DD-MMM-YYYY(Ex.: 01-Jan-2022) or an empty string. strike_date can not be an empty string for exchange_code 'NDX', 'MCX' and 'NFO'.
+
+strike_price can be float-value in string or an empty string. strike_price can not be an empty string for product_type 'Options'.
+
+right can be either 'Put', 'Call' or an empty string. right can not be an empty string for product_type 'Options'.
+
+Either get_exchange_quotes must be True or get_market_depth must be True.
+
+Both get_exchange_quotes and get_market_depth can be True, But both must not be False.
+
+For Streaming OHLCV, interval must not be empty and must be equal to either of the following "1second","1minute", "5minute", "30minute"
+
+List of other SDK Methods:
+get_customer_details
+get_demat_holdings
+get_funds
+set_funds
+get_historical_data
+get_historical_data_v2
+add_margin
+get_margin
+place_order
+order_detail
+order_list
+cancel_order
+modify_order
+get_portfolio_holding
+get_portfolio_position
+get_quotes
+get_option_chain_quotes
+square_off
+modify_order
+get_trade_list
+get_trade_detail
+get_names
+preview_order
+limit_calculator
+margin_calculator
+
+Get Customer details by api-session value.
+breeze.get_customer_details(api_session="your_api_session") 
+
+Get Demat Holding details of your account.
+breeze.get_demat_holdings()
+
+Get Funds details of your account.
+breeze.get_funds()
+
+Set Funds of your account
+breeze.set_funds(transaction_type="debit", 
+                    amount="200",
+                    segment="Equity")
+breeze.set_funds(transaction_type="debit", 
+                    amount="200",
+                    segment="Commodity")
+Note: Set Funds of your account by transaction-type as "Credit" or "Debit" with amount in numeric string as rupees and segment-type as "Equity" or "FNO" or "Commodity".
+
+Get Historical Data for Futures
+breeze.get_historical_data(interval="1minute",
+                            from_date= "2022-08-15T07:00:00.000Z",
+                            to_date= "2022-08-17T07:00:00.000Z",
+                            stock_code="ICIBAN",
+                            exchange_code="NFO",
+                            product_type="futures",
+                            expiry_date="2022-08-25T07:00:00.000Z",
+                            right="others",
+                            strike_price="0")
+                          
+Get Historical Data for Equity
+breeze.get_historical_data(interval="1minute",
+                            from_date= "2022-08-15T07:00:00.000Z",
+                            to_date= "2022-08-17T07:00:00.000Z",
+                            stock_code="ITC",
+                            exchange_code="NSE",
+                            product_type="cash")
+
+Get Historical Data for Options
+breeze.get_historical_data(interval="1minute",
+                            from_date= "2022-08-15T07:00:00.000Z",
+                            to_date= "2022-08-17T07:00:00.000Z",
+                            stock_code="CNXBAN",
+                            exchange_code="NFO",
+                            product_type="options",
+                            expiry_date="2022-09-29T07:00:00.000Z",
+                            right="call",
+                            strike_price="38000")
+Note : Get Historical Data for specific stock-code by mentioned interval either as "1minute", "5minute", "30minute" or as "1day"
+
+Get Historical Data (version 2) for Futures
+breeze.get_historical_data_v2(interval="1minute",
+                            from_date= "2022-08-15T07:00:00.000Z",
+                            to_date= "2022-08-17T07:00:00.000Z",
+                            stock_code="ICIBAN",
+                            exchange_code="NFO",
+                            product_type="futures",
+                            expiry_date="2022-08-25T07:00:00.000Z",
+                            right="others",
+                            strike_price="0")            
+
+Get Historical Data (version 2) for Equity
+breeze.get_historical_data_v2(interval="1minute",
+                            from_date= "2022-08-15T07:00:00.000Z",
+                            to_date= "2022-08-17T07:00:00.000Z",
+                            stock_code="ITC",
+                            exchange_code="NSE",
+                            product_type="cash")
+
+Get Historical Data (version 2) for Options
+breeze.get_historical_data_v2(interval="1minute",
+                            from_date= "2022-08-15T07:00:00.000Z",
+                            to_date= "2022-08-17T07:00:00.000Z",
+                            stock_code="CNXBAN",
+                            exchange_code="NFO",
+                            product_type="options",
+                            expiry_date="2022-09-29T07:00:00.000Z",
+                            right="call",
+                            strike_price="38000")
+Note :
+Get Historical Data (version 2) for specific stock-code by mentioning interval either as "1second","1minute", "5minute", "30minute" or as "1day".
+Maximum candle intervals in one single request is 1000
+
+Add Margin to your account.
+breeze.add_margin(product_type="margin", 
+                    stock_code="ICIBAN", 
+                    exchange_code="BSE", 
+                    settlement_id="2021220", 
+                    add_amount="100", 
+                    margin_amount="3817.10", 
+                    open_quantity="10", 
+                    cover_quantity="0", 
+                    category_index_per_stock="", 
+                    expiry_date="", 
+                    right="", 
+                    contract_tag="", 
+                    strike_price="", 
+                    segment_code="")
+
+Get Margin of your account.
+breeze.get_margin(exchange_code="NSE")
+Note: Please change exchange_code=“NFO” to get F&O margin details
+
+Placing a Futures Order from your account.
+breeze.place_order(stock_code="ICIBAN",
+                    exchange_code="NFO",
+                    product="futures",
+                    action="buy",
+                    order_type="limit",
+                    stoploss="0",
+                    quantity="3200",
+                    price="200",
+                    validity="day",
+                    validity_date="2022-08-22T06:00:00.000Z",
+                    disclosed_quantity="0",
+                    expiry_date="2022-08-25T06:00:00.000Z",
+                    right="others",
+                    strike_price="0",
+                    user_remark="Test")
+
+Placing an Option Order from your account.
+breeze.place_order(stock_code="NIFTY",
+                    exchange_code="NFO",
+                    product="options",
+                    action="buy",
+                    order_type="market",
+                    stoploss="",
+                    quantity="50",
+                    price="",
+                    validity="day",
+                    validity_date="2022-08-30T06:00:00.000Z",
+                    disclosed_quantity="0",
+                    expiry_date="2022-09-29T06:00:00.000Z",
+                    right="call",
+                    strike_price="16600")
+
+Place a cash order from your account.
+breeze.place_order(stock_code="ITC",
+                    exchange_code="NSE",
+                    product="cash",
+                    action="buy",
+                    order_type="limit",
+                    stoploss="",
+                    quantity="1",
+                    price="305",
+                    validity="day"
+                )
+
+Place an optionplus order
+breeze.place_order(stock_code="NIFTY",
+                    exchange_code="NFO",
+                    product="optionplus",
+                    action="buy",
+                    order_type="limit",
+                    stoploss="15",
+                    quantity="50",
+                    price="11.25",
+                    validity="day",
+                    validity_date="2022-12-02T06:00:00.000Z",
+                    disclosed_quantity="0",
+                    expiry_date="2022-12-08T06:00:00.000Z",
+                    right="call",
+                    strike_price="19000",
+                    order_type_fresh = "Limit",
+                    order_rate_fresh = "20",
+                    user_remark="Test")
+
+Place btst order
+breeze.place_order(stock_code = "RELIND",
+    exchange_code= "NSE",
+    product = "btst",
+    action = "buy",
+    order_type = "limit",
+    quantity = "1",
+    price = "2450",
+    validity = "day",
+    stoploss  = "",
+    order_type_fresh = "",
+    order_rate_fresh = "",
+    validity_date = "",
+    disclosed_quantity = "",
+    expiry_date =  "",
+    right = "",
+    strike_price = "",
+    user_remark = "",
+    settlement_id = "2023008",
+    order_segment_code = "N")
+
+Get an order details by exchange-code and order-id from your account.
+breeze.get_order_detail(exchange_code="NSE",
+                        order_id="20220819N100000001")
+Note: Please change exchange_code=“NFO” to get details about F&O
+
+Get order list of your account.
+breeze.get_order_list(exchange_code="NSE",
+                        from_date="2022-08-01T10:00:00.000Z",
+                        to_date="2022-08-19T10:00:00.000Z")
+Note: Please change exchange_code=“NFO” to get details about F&O
+
+Cancel an order from your account whose status are not Executed.
+breeze.cancel_order(exchange_code="NSE",
+                    order_id="20220819N100000001")
+
+Modify an order from your account whose status are not Executed.
+breeze.modify_order(order_id="202208191100000001",
+                    exchange_code="NFO",
+                    order_type="limit",
+                    stoploss="0",
+                    quantity="250",
+                    price="290100",
+                    validity="day",
+                    disclosed_quantity="0",
+                    validity_date="2022-08-22T06:00:00.000Z")
+
+Get Portfolio Holdings of your account.
+breeze.get_portfolio_holdings(exchange_code="NFO",
+                                from_date="2022-08-01T06:00:00.000Z",
+                                to_date="2022-08-19T06:00:00.000Z",
+                                stock_code="",
+                                portfolio_type="")
+Note: Please change exchange_code=“NSE” to get Equity Portfolio Holdings
+
+Get Portfolio Positions from your account.
+breeze.get_portfolio_positions()
+
+Get quotes of mentioned stock-code
+breeze.get_quotes(stock_code="ICIBAN",
+                    exchange_code="NFO",
+                    expiry_date="2022-08-25T06:00:00.000Z",
+                    product_type="futures",
+                    right="others",
+                    strike_price="0")
+
+Get option-chain of mentioned stock-code for product-type Futures where input of expiry-date is not compulsory
+breeze.get_option_chain_quotes(stock_code="ICIBAN",
+                    exchange_code="NFO",
+                    product_type="futures",
+                    expiry_date="2022-08-25T06:00:00.000Z")
+
+Get option-chain of mentioned stock-code for product-type Options where atleast 2 input is required out of expiry-date, right and strike-price
+breeze.get_option_chain_quotes(stock_code="ICIBAN",
+                    exchange_code="NFO",
+                    product_type="options",
+                    expiry_date="2022-08-25T06:00:00.000Z",
+                    right="call")
+
+Square off an Equity Margin Order
+breeze.square_off(exchange_code="NSE",
+                    product="margin",
+                    stock_code="NIFTY",
+                    quantity="10",
+                    price="0",
+                    action="sell",
+                    order_type="market",
+                    validity="day",
+                    stoploss="0",
+                    disclosed_quantity="0",
+                    protection_percentage="",
+                    settlement_id="",
+                    cover_quantity="",
+                    open_quantity="",
+                    margin_amount="")
+Note: Please refer get_portfolio_positions() for settlement id and margin_amount
+
+Square off an FNO Futures Order
+breeze.square_off(exchange_code="NFO",
+                    product="futures",
+                    stock_code="ICIBAN",
+                    expiry_date="2022-08-25T06:00:00.000Z",
+                    action="sell",
+                    order_type="market",
+                    validity="day",
+                    stoploss="0",
+                    quantity="50",
+                    price="0",
+                    validity_date="2022-08-12T06:00:00.000Z",
+                    trade_password="",
+                    disclosed_quantity="0")
+
+Square off an FNO Options Order
+breeze.square_off(exchange_code="NFO",
+                    product="options",
+                    stock_code="ICIBAN",
+                    expiry_date="2022-08-25T06:00:00.000Z",
+                    right="Call",
+                    strike_price="16850",
+                    action="sell",
+                    order_type="market",
+                    validity="day",
+                    stoploss="0",
+                    quantity="50",
+                    price="0",
+                    validity_date="2022-08-12T06:00:00.000Z",
+                    trade_password="",
+                    disclosed_quantity="0")
+
+Get trade list of your account.
+breeze.get_trade_list(from_date="2022-08-01T06:00:00.000Z",
+                        to_date="2022-08-19T06:00:00.000Z",
+                        exchange_code="NSE",
+                        product_type="",
+                        action="",
+                        stock_code="")
+Note: Please change exchange_code=“NFO” to get details about F&O
+
+Get trade detail of your account.
+breeze.get_trade_detail(exchange_code="NSE",
+                        order_id="20220819N100000005")
+Note: Please change exchange_code=“NFO” to get details about F&O
+
+Get Names
+breeze.get_names(exchange_code = 'NSE',stock_code = 'TATASTEEL')
+breeze.get_names(exchange_code = 'NSE',stock_code = 'RELIANCE')
+Note: Use this method to find ICICI specific stock codes / token
+
+Preview Order.
+breeze.preview_order(
+    stock_code = "ICIBAN",
+    exchange_code = "NSE",
+    product = "margin",
+    order_type = "limit",
+    price = "907.05",
+    action = "buy",
+    quantity = "1",
+    specialflag = "N"
+)
+
+Limit Calculator.
+breeze.limit_calculator(strike_price = "19200",                                    
+    product_type = "optionplus",                 
+    expiry_date  = "06-JUL-2023",
+    underlying = "NIFTY",
+    exchange_code = "NFO",
+    order_flow = "Buy",
+    stop_loss_trigger = "200.00",
+    option_type = "Call",
+    source_flag = "P",
+    limit_rate = "",
+    order_reference = "",
+    available_quantity = "",
+    market_type = "limit",
+    fresh_order_limit = "177.70")
+
+Margin Calculator.
+breeze.margin_calculator([{
+            "strike_price": "0",
+            "quantity": "15",
+            "right": "others",
+            "product": "futures",
+            "action": "buy",
+            "price": "46230.85",
+            "expiry_date": "31-Aug-2023",
+            "stock_code": "CNXBAN",
+            "cover_order_flow": "N",
+            "fresh_order_type": "N",
+            "cover_limit_rate": "0",
+            "cover_sltp_price": "0",
+            "fresh_limit_rate": "0",
+            "open_quantity": "0"
+        },
+        {
+            "strike_price": "37000",
+            "quantity": "15",
+            "right": "Call",
+            "product": "options",
+            "action": "buy",
+            "price": "9100",
+            "expiry_date": "27-Jul-2023",
+            "stock_code": "CNXBAN",
+            "cover_order_flow": "N",
+            "fresh_order_type": "N",
+            "cover_limit_rate": "0",
+            "cover_sltp_price": "0",
+            "fresh_limit_rate": "0",
+            "open_quantity": "0"
+        },
+        {
+            "strike_price": "0",
+            "quantity": "50",
+            "right": "others",
+            "product": "futureplus",
+            "action": "buy",
+            "price": "19800",
+            "expiry_date": "27-Jul-2023",
+            "stock_code": "NIFTY",
+            "cover_order_flow": "N",
+            "fresh_order_type": "N",
+            "cover_limit_rate": "0",
+            "cover_sltp_price": "0",
+            "fresh_limit_rate": "0",
+            "open_quantity": "0"
+        },
+        {
+            "strike_price": "19600",
+            "quantity": "50",
+            "right": "call",
+            "product": "optionplus",
+            "action": "buy",
+            "price": "245.05",
+            "expiry_date": "27-Jul-2023",
+            "stock_code": "NIFTY",
+            "cover_order_flow": "sell",
+            "fresh_order_type": "limit",
+            "cover_limit_rate": "180.00",
+            "cover_sltp_price": "200.00",
+            "fresh_limit_rate": "245.05",
+            "open_quantity": "50"
+        }],exchange_code = "NFO")
