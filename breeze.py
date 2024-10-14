@@ -41,6 +41,18 @@ def connect():
     except Exception as e:
         logger.error(f"Failed to generate session: {e}")
         exit(1)
+
+def create_date(date, month):
+    # Validate inputs
+    if not (1 <= date <= 31) or not (1 <= month <= 12):
+        raise ValueError("Invalid date or month")
+
+    # Create a datetime object for the given date and month in the year 2024
+    # We use 6:00 AM as the time
+    dt = datetime(2024, month, date, 6, 0, 0)
+
+    # Format the datetime as a string
+    return dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
         
 def get_current_expiry():
     today = datetime.now(pytz.timezone('Asia/Kolkata'))
@@ -62,14 +74,15 @@ class contract:
         self.right = right
         self.strike_price = strike_price
         
-def generate_contarcts(stock_code, expiry_date, start_strike, end_strike, interval, exchange_code = "NFO", product_type = "options"):
-    for strike in range(start_strike, end_strike+1, interval) :
+def generate_contracts(stock_code, expiry_date, start_strike, end_strike, interval, keyword=None, exchange_code="NFO", product_type="options"):
+    for strike in range(start_strike, end_strike+1, interval):
         # Generating calls
-        globals()[f"{stock_code}{strike}CE"] = contract(stock_code, exchange_code, product_type, expiry_date, "call", strike)
+        globals()[f"{stock_code}{strike}CE{keyword if keyword else ''}"] = contract(stock_code, exchange_code, product_type, expiry_date, "call", strike)
     
-        # Genrating puts
-        globals()[f"{stock_code}{strike}PE"] = contract(stock_code, exchange_code, product_type, expiry_date, "put", strike)
-        print(f"{stock_code}{strike}CE, {stock_code}{strike}PE generated.")
+        # Generating puts
+        globals()[f"{stock_code}{strike}PE{keyword if keyword else ''}"] = contract(stock_code, exchange_code, product_type, expiry_date, "put", strike)
+        
+        print(f"{f"{stock_code}{strike}CE{keyword if keyword else ''}"}, {f"{stock_code}{strike}PE{keyword if keyword else ''}"} generated.")
         
 def clear():
     clear_output(wait=True)    
