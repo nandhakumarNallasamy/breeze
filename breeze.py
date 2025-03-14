@@ -29,12 +29,13 @@ def log():
     return logger
 
 def connect():
+    # Initialize and connect to BreezeConnect API with WebSocket
     api_key = os.environ.get("BREEZE_API_KEY")
     api_secret = os.environ.get("BREEZE_API_SECRET_KEY")
     breeze = BreezeConnect(api_key)
     try:
         breeze.generate_session(api_secret, session_token)
-        logger.info("Successfully connected to BreezeConnect")
+        logger.info("✅ Successfully connected to BreezeConnect")
         
         def on_ticks(ticks):
             global current_pric
@@ -42,18 +43,19 @@ def connect():
                 if ticks.get("last"):
                     current_price = float(ticks["last"])
             except Exception as e:
-                logger.error(f"Error in websocket callback: {e}")
+                logger.error(f"❌ Error in websocket callback: {e}")
         
         breeze.on_ticks = on_ticks
         breeze.ws_connect()
-        logger.info("Websocket connected")
+        logger.info("✅ Websocket connected")
         return breeze
         
     except Exception as e:
-        logger.error(f"Failed to generate session: {e}")
+        logger.error(f"❌ Failed to generate session: {e}")
         exit(1)
 
 def subscribe_feed(contract):
+    # Subscribe to real-time feed for a contract
     try:
         expiry_date = datetime.strptime(contract.expiry_date.split('T')[0], '%Y-%m-%d').strftime('%d-%b-%Y')
         
@@ -67,13 +69,14 @@ def subscribe_feed(contract):
             get_exchange_quotes=True,
             get_market_depth=False
         )
-        logger.info(f"Subscribed to feeds for {contract.shorthand}")
+        logger.info(f"✅ Subscribed to feeds for {contract.shorthand}")
         
     except Exception as e:
-        logger.error(f"Failed to subscribe feeds: {e}")
+        logger.error(f"❌ Failed to subscribe feeds: {e}")
         raise
 
 def unsubscribe_feed(contract):
+    # Unsubscribe from real-time feed for a contract
     try:
         expiry_date = datetime.strptime(contract.expiry_date.split('T')[0], '%Y-%m-%d').strftime('%d-%b-%Y')
         
@@ -87,26 +90,21 @@ def unsubscribe_feed(contract):
             get_exchange_quotes=True,
             get_market_depth=False
         )
-        logger.info(f"Unsubscribed from feeds for {contract.shorthand}")
+        logger.info(f"✅ Unsubscribed from feeds for {contract.shorthand}")
         
     except Exception as e:
-        logger.error(f"Failed to unsubscribe feeds: {e}")
+        logger.error(f"❌ Failed to unsubscribe feeds: {e}")
         raise
 
 def create_date(date, month, year=2025):
-    # Validate inputs
+    # Create ISO8601 date string for the given date and month
     if not (1 <= date <= 31) or not (1 <= month <= 12):
         raise ValueError("Invalid date or month")
-
-    # Create a datetime object for the given date and month in the year 2024
-    # We use 6:00 AM as the time
     dt = datetime(year, month, date, 6, 0, 0)
-
-    # Format the datetime as a string
     return dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
         
 def get_current_expiry(target_weekday):
-    #Get the date of the current or next occurrence of the specified weekday.
+    # Get the date of the current or next occurrence of the specified weekday
     # 0-Monday, 1-Tuesday, 2-Wednesday,..., 6-Sunday
     today = datetime.now(pytz.timezone('Asia/Kolkata'))
     days_ahead = (target_weekday - today.weekday()) % 7  
@@ -115,6 +113,7 @@ def get_current_expiry(target_weekday):
     return weekday.strftime("%Y-%m-%dT06:00:00.000Z")
 
 class contract:
+    # Class to represent a trading contract (futures or options)
     def __init__(self, stock_code, exchange_code, product_type, expiry_date, right="others", strike_price="0"):
         if product_type == "options":
             self.shorthand = f"{stock_code}-{expiry_date.split('T')[0]}-{strike_price}-{right}"
@@ -129,6 +128,7 @@ class contract:
         self.strike_price = strike_price
         
 def generate_contracts(stock_code, expiry_date, start_strike, end_strike, interval, keyword=None, exchange_code="NFO", product_type="options"):
+    # Generate call and put option contracts for a range of strike prices
     for strike in range(start_strike, end_strike+1, interval):
         # Generating calls
         globals()[f"{stock_code}{strike}CE{keyword if keyword else ''}"] = contract(stock_code, exchange_code, product_type, expiry_date, "call", strike)
@@ -136,12 +136,14 @@ def generate_contracts(stock_code, expiry_date, start_strike, end_strike, interv
         # Generating puts
         globals()[f"{stock_code}{strike}PE{keyword if keyword else ''}"] = contract(stock_code, exchange_code, product_type, expiry_date, "put", strike)
         
-        print(f"{f"{stock_code}{strike}CE{keyword if keyword else ''}"}, {f"{stock_code}{strike}PE{keyword if keyword else ''}"} generated.")
+        print(f"ℹ️ {f"{stock_code}{strike}CE{keyword if keyword else ''}"}, {f"{stock_code}{strike}PE{keyword if keyword else ''}"} generated.")
         
 def clear():
+    # Clear the output in Jupyter notebooks
     clear_output(wait=True)    
 
 def place_fno_order(contract, action, quantity, count=1, price="0"):
+    # Place an F&O order, optionally multiple times using threading
     def place_single_order(contract, action, quantity, price):
         try:
             response = breeze.place_order(
@@ -161,14 +163,14 @@ def place_fno_order(contract, action, quantity, count=1, price="0"):
                 strike_price=contract.strike_price
             )
             if response.get("Status") == 200:
-                logger.info(f"{contract.shorthand}-{action} order successful.")
+                logger.info(f"✅ {contract.shorthand}-{action} order successful.")
             else:
-                logger.error(f"{contract.shorthand}-{action} order failed.")
+                logger.error(f"❌ {contract.shorthand}-{action} order failed.")
                 if response.get("Error") is not None:
-                    logger.error(f"Error details: {response.get('Error')}")
+                    logger.error(f"❌ Error details: {response.get('Error')}")
             return response
         except Exception as e:
-            logger.error(f"Error in placing order:{contract.shorthand}-{action} {e}")
+            logger.error(f"❌ Error in placing order:{contract.shorthand}-{action} {e}")
             return None
 
     if count <= 1:
@@ -188,6 +190,7 @@ def place_fno_order(contract, action, quantity, count=1, price="0"):
             thread.join()
 
 def get_price(contract):
+    # Get the current price for a contract
     try:
         response = breeze.get_quotes(
             stock_code = contract.stock_code,
@@ -200,14 +203,15 @@ def get_price(contract):
         if response.get("Success"):
             return float(response["Success"][0]["ltp"])
         else:
-            logger.error(f"API error in fetching {contract.shorthand}")
+            logger.error(f"❌ API error in fetching {contract.shorthand}")
             print(response)
             return None
     except Exception as e:
-        logger.error(f"Error fetching {contract.shorthand} price: {e}")
+        logger.error(f"❌ Error fetching {contract.shorthand} price: {e}")
         return None
 
 def place_hedge_order(contract1, contract2, quantity, count = 1):
+    # Place a hedge order (buy one contract, sell another) multiple times
     try:
         i = 0
         while i < count:
@@ -215,19 +219,20 @@ def place_hedge_order(contract1, contract2, quantity, count = 1):
             if response.get("Status") == 200 :
                 response = place_fno_order(contract2, "sell", (quantity), price="0")
                 while response.get("Status") != 200 :
-                    logger.info(f"Retrying...")
+                    logger.info(f"🔄 Retrying...")
                     response = place_fno_order(contract2, "sell", (quantity), price="0")
             else:
-                logger.info(f"Retrying...")
+                logger.info(f"🔄 Retrying...")
                 i -= 1
             i += 1
 
     except KeyboardInterrupt:
         logger.info("Program terminated by user.")
     except Exception as e:
-        logger.error(f"Unexpected error in loop: {e}")
+        logger.error(f"❌ Unexpected error in loop: {e}")
 
 def hold_spot(sell_contract, sell_quantity, sell_multiple, threshold=0, buy_contract=None, buy_quantity=None, buy_multiple=None, position=None):
+    # Monitor and trade a contract based on price movements around a threshold
     global current_price
     try:
         price = None
@@ -278,10 +283,11 @@ def hold_spot(sell_contract, sell_quantity, sell_multiple, threshold=0, buy_cont
         current_price = None
 
 def test_websocket(contract):
+    # Test websocket connection by monitoring price updates for a contract
     global current_price
     try:
         subscribe_feed(contract)
-        print(f"\nStarted monitoring {contract.shorthand}")
+        print(f"\n✅ Started monitoring {contract.shorthand}")
         print("Press Ctrl+C to stop...\n")
         
         last_price = None
@@ -309,7 +315,7 @@ def test_websocket(contract):
         current_price = None
 
 def place_exit_order(position_tuple):
-    """Place a single exit order, splitting into chunks if necessary."""
+    # Place a single exit order, splitting into chunks if necessary
     pos, action = position_tuple
     try:
         price_adjustment = 0
@@ -346,24 +352,24 @@ def place_exit_order(position_tuple):
             )
             
             if response.get("Status") == 200:
-                logger.info(f"{action.upper()}: {pos['stock_code']} {pos['strike_price']}{pos['right']} x {chunk_qty} @ {price}")
+                logger.info(f"✅ {action.upper()}: {pos['stock_code']} {pos['strike_price']}{pos['right']} x {chunk_qty} @ {price}")
             else:
-                logger.error(f"Failed {action.upper()}: {pos['stock_code']} {pos['strike_price']}{pos['right']} x {chunk_qty} @ {price}: {response.get('Error', 'Unknown error')}")
+                logger.error(f"❌ Failed {action.upper()}: {pos['stock_code']} {pos['strike_price']}{pos['right']} x {chunk_qty} @ {price}: {response.get('Error', 'Unknown error')}")
 
     except Exception as e:
-        logger.error(f"Order failed - {pos['stock_code']}: {str(e)}")
+        logger.error(f"❌ Order failed - {pos['stock_code']}: {str(e)}")
 
 
 def cancel_order(order):
-    """Cancel a single order with logging"""
+    # Cancel a single order with logging
     try:
         breeze.cancel_order(order["exchange_code"], order["order_id"])
-        logger.info(f"Cancelled: {order['stock_code']} {order['strike_price']}{order['right']} (ID: {order['order_id']})")
+        logger.info(f"✅ Cancelled: {order['stock_code']} {order['strike_price']}{order['right']} (ID: {order['order_id']})")
     except Exception as e:
-        logger.error(f"Cancel failed - Order {order['order_id']}: {str(e)}")
+        logger.error(f"❌ Cancel failed - Order {order['order_id']}: {str(e)}")
 
 def az5():
-    """Emergency close all positions and cancel pending orders"""
+    # Emergency close all positions and cancel pending orders
     try:
         logger.info("🔄 AZ5 initiated")
         
@@ -371,10 +377,10 @@ def az5():
         
         cancel_pending_orders()
         
-        logger.info("AZ5 completed")
+        logger.info("✅ AZ5 completed")
         
     except Exception as e:
-        logger.error(f"AZ5 failed: {e}")
+        logger.error(f"❌ AZ5 failed: {e}")
         
 def close_open_positions():
     # Close positions
@@ -396,7 +402,7 @@ def close_open_positions():
             logger.info("ℹ️ No positions available")
 
 def cancel_pending_orders():
-    # Cancel pending orders for both NFO and B0E
+    # Cancel pending orders for both NFO and BSE
     for exchange_code in ["NFO", "BFO"]:
         orders_response = breeze.get_order_list(
             exchange_code=exchange_code,
@@ -423,7 +429,7 @@ if __name__ == "__main__":
     
     # Initiate logger
     logger = log()
-    logger.info(f"Current IST time: {get_ist_time()}")
+    logger.info(f"✅ Current IST time: {get_ist_time()}")
     
     # Initialize BreezeConnect
     breeze = connect()
