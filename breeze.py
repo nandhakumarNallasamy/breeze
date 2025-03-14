@@ -93,14 +93,14 @@ def unsubscribe_feed(contract):
         logger.error(f"Failed to unsubscribe feeds: {e}")
         raise
 
-def create_date(date, month):
+def create_date(date, month, year=2025):
     # Validate inputs
     if not (1 <= date <= 31) or not (1 <= month <= 12):
         raise ValueError("Invalid date or month")
 
     # Create a datetime object for the given date and month in the year 2024
     # We use 6:00 AM as the time
-    dt = datetime(2024, month, date, 6, 0, 0)
+    dt = datetime(year, month, date, 6, 0, 0)
 
     # Format the datetime as a string
     return dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
@@ -378,4 +378,5 @@ if __name__ == "__main__":
     # Initialize BreezeConnect
     breeze = connect()
 
-    
+    # Give kill alias to az5
+    az5 = kill = az5
