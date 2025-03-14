@@ -253,6 +253,114 @@ def test_websocket(contract):
         unsubscribe_feed(contract)
         current_price = None
 
+def place_exit_order(position_tuple):
+    """Place a single exit order, splitting into chunks if necessary."""
+    pos, action = position_tuple
+    try:
+        price_adjustment = 0
+        price = float(pos["ltp"])
+        qty = int(float(pos["quantity"]))
+        if price > 15:
+            price_adjustment = 15 if action == "buy" else -15
+        price += price_adjustment
+        max_qty = 450  # Maximum order size
+        
+        # Convert expiry date from "13-Nov-2024" to ISO format
+        expiry_date = datetime.strptime(pos["expiry_date"], "%d-%b-%Y").strftime("%Y-%m-%dT06:00:00.000Z")
+        
+        while qty > 0:
+            chunk_qty = min(qty, max_qty)
+            qty -= chunk_qty
+
+            response = breeze.square_off(
+                exchange_code=str(pos["exchange_code"]),
+                product=str(pos["product_type"]).lower(),
+                stock_code=str(pos["stock_code"]),
+                expiry_date=str(expiry_date),
+                right=str(pos["right"]),
+                strike_price=str(pos["strike_price"]),
+                action=str(action),
+                order_type="limit",  # Changed to limit since we're using price
+                validity="day",
+                stoploss="0",
+                quantity=str(chunk_qty),
+                price=str(price),  # Using adjusted price
+                validity_date=str(get_iso_date(get_ist_time())),
+                trade_password="",
+                disclosed_quantity="0"
+            )
+            
+            if response.get("Status") == 200:
+                logger.info(f"{action.upper()}: {pos['stock_code']} {pos['strike_price']}{pos['right']} x {chunk_qty} @ {price}")
+            else:
+                logger.error(f"Failed {action.upper()}: {pos['stock_code']} {pos['strike_price']}{pos['right']} x {chunk_qty} @ {price}: {response.get('Error', 'Unknown error')}")
+
+    except Exception as e:
+        logger.error(f"Order failed - {pos['stock_code']}: {str(e)}")
+
+
+def cancel_order(order):
+    """Cancel a single order with logging"""
+    try:
+        breeze.cancel_order(order["exchange_code"], order["order_id"])
+        logger.info(f"Cancelled: {order['stock_code']} {order['strike_price']}{order['right']} (ID: {order['order_id']})")
+    except Exception as e:
+        logger.error(f"Cancel failed - Order {order['order_id']}: {str(e)}")
+
+def az5():
+    """Emergency close all positions and cancel pending orders"""
+    try:
+        logger.info("🔄 AZ5 initiated")
+        
+        close_open_positions()
+        
+        cancel_pending_orders()
+        
+        logger.info("AZ5 completed")
+        
+    except Exception as e:
+        logger.error(f"AZ5 failed: {e}")
+        
+def close_open_positions():
+    # Close positions
+        positions_response = breeze.get_portfolio_positions()
+        if positions_response.get("Error") is None:  # No error means we have valid response
+            positions = positions_response.get("Success", [])
+            if positions:  # If we have positions data
+                active = [(p, "buy" if p["action"] == "Sell" else "sell") 
+                         for p in positions 
+                         if p["quantity"] != "0" and p["action"] != "NA"]
+                
+                if active:
+                    logger.info(f"🔄 Processing {len(active)} positions")
+                    with ThreadPoolExecutor(max_workers=5) as executor:
+                        list(executor.map(place_exit_order, active))
+                else:
+                    logger.info("ℹ️ No active positions to close")
+        else:
+            logger.info("ℹ️ No positions available")
+
+def cancel_pending_orders():
+    # Cancel pending orders for both NFO and B0E
+    for exchange_code in ["NFO", "BFO"]:
+        orders_response = breeze.get_order_list(
+            exchange_code=exchange_code,
+            from_date=get_iso_date(get_ist_time()),
+            to_date=get_iso_date(get_ist_time())
+        )
+        
+        if orders_response.get("Error") is None:  # No error means we have valid response
+            orders = orders_response.get("Success", [])
+            pending = [o for o in orders if o["status"] in ["Ordered", "Requested"]]
+            if pending:
+                logger.info(f"🔄 Cancelling {len(pending)} {exchange_code} pending orders")
+                with ThreadPoolExecutor(max_workers=5) as executor:
+                    list(executor.map(cancel_order, pending))
+            else:
+                logger.info(f"ℹ️ No pending {exchange_code} orders to cancel")
+        else:
+            logger.info(f"ℹ️ No {exchange_code} orders available")
+
 # Main execution
 if __name__ == "__main__":
     # Prompt session token
