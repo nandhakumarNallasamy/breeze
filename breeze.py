@@ -227,6 +227,56 @@ def place_hedge_order(contract1, contract2, quantity, count = 1):
     except Exception as e:
         logger.error(f"Unexpected error in loop: {e}")
 
+def hold_spot(sell_contract, sell_quantity, sell_multiple, threshold=0, buy_contract=None, buy_quantity=None, buy_multiple=None, position=None):
+    global current_price
+    try:
+        price = None
+        position = position if position is not None else 0
+        count = 0
+        running = True
+        iterations = 0
+
+        subscribe_feed(sell_contract)
+        while current_price is None:
+            pass
+           
+        price = current_price
+        if threshold == 0:
+            threshold = get_price(sell_contract)
+
+        if buy_contract and buy_quantity and buy_multiple:
+            place_fno_order(buy_contract, "buy", buy_quantity, buy_multiple)
+
+        while running:
+            price = current_price
+            iterations += 1
+           
+            if iterations % 10 == 0:
+                clear_output(wait=True)
+                print(f"Threshold: {threshold} | Price: {price} | Count: {count} | Position: {position} | Iterations: {iterations}")
+           
+            if position == 0 and price < threshold-1:
+                place_fno_order(sell_contract, "sell", sell_quantity, sell_multiple)
+                position = -1
+                count += 1
+                logger.info(f"✅ Sold at {price}")
+               
+            elif position == -1 and price > threshold:
+                place_fno_order(sell_contract, "buy", sell_quantity, sell_multiple)
+                position = 0
+                logger.info(f"✅ Bought at {price}")
+               
+            sleep(0.2)
+               
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        logger.error(f"❌ Error in main loop: {e}")
+    finally:
+        running = False
+        unsubscribe_feed(sell_contract)
+        current_price = None
+
 def test_websocket(contract):
     global current_price
     try:
