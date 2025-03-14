@@ -27,20 +27,69 @@ def log():
     return logger
 
 def connect():
-    # Load environment variables
     api_key = os.environ.get("BREEZE_API_KEY")
     api_secret = os.environ.get("BREEZE_API_SECRET_KEY")
-    # Initialize BreezeConnect
     breeze = BreezeConnect(api_key)
-    
-    # Generate Session
     try:
         breeze.generate_session(api_secret, session_token)
         logger.info("Successfully connected to BreezeConnect")
+        
+        def on_ticks(ticks):
+            global current_pric
+            try:
+                if ticks.get("last"):
+                    current_price = float(ticks["last"])
+            except Exception as e:
+                logger.error(f"Error in websocket callback: {e}")
+        
+        breeze.on_ticks = on_ticks
+        breeze.ws_connect()
+        logger.info("Websocket connected")
         return breeze
+        
     except Exception as e:
         logger.error(f"Failed to generate session: {e}")
         exit(1)
+
+def subscribe_feed(contract):
+    try:
+        expiry_date = datetime.strptime(contract.expiry_date.split('T')[0], '%Y-%m-%d').strftime('%d-%b-%Y')
+        
+        breeze.subscribe_feeds(
+            exchange_code=contract.exchange_code,
+            stock_code=contract.stock_code,
+            product_type="Options" if contract.product_type == "options" else "Futures",
+            expiry_date=expiry_date,
+            strike_price=str(contract.strike_price),
+            right="Call" if contract.right == "call" else "Put" if contract.right == "put" else "",
+            get_exchange_quotes=True,
+            get_market_depth=False
+        )
+        logger.info(f"Subscribed to feeds for {contract.shorthand}")
+        
+    except Exception as e:
+        logger.error(f"Failed to subscribe feeds: {e}")
+        raise
+
+def unsubscribe_feed(contract):
+    try:
+        expiry_date = datetime.strptime(contract.expiry_date.split('T')[0], '%Y-%m-%d').strftime('%d-%b-%Y')
+        
+        breeze.unsubscribe_feeds(
+            exchange_code=contract.exchange_code,
+            stock_code=contract.stock_code,
+            product_type="Options" if contract.product_type == "options" else "Futures",
+            expiry_date=expiry_date,
+            strike_price=str(contract.strike_price),
+            right="Call" if contract.right == "call" else "Put" if contract.right == "put" else "",
+            get_exchange_quotes=True,
+            get_market_depth=False
+        )
+        logger.info(f"Unsubscribed from feeds for {contract.shorthand}")
+        
+    except Exception as e:
+        logger.error(f"Failed to unsubscribe feeds: {e}")
+        raise
 
 def create_date(date, month):
     # Validate inputs
@@ -172,6 +221,37 @@ def place_hedge_order(contract1, contract2, quantity, count = 1):
         logger.info("Program terminated by user.")
     except Exception as e:
         logger.error(f"Unexpected error in loop: {e}")
+
+def test_websocket(contract):
+    global current_price
+    try:
+        subscribe_feed(contract)
+        print(f"\nStarted monitoring {contract.shorthand}")
+        print("Press Ctrl+C to stop...\n")
+        
+        last_price = None
+        last_update_time = None
+        
+        while True:
+            clear()
+            now = datetime.now()
+            
+            if current_price != last_price:
+                last_price = current_price
+                last_update_time = now
+                
+            time_since_update = (now - last_update_time).total_seconds() if last_update_time else 0
+                
+            print(f"Contract: {contract.shorthand}")
+            print(f"Current Price: {current_price}")
+            print(f"Seconds since last update: {time_since_update:.1f}")
+            sleep(0.1)
+            
+    except KeyboardInterrupt:
+        print("\nTest stopped by user")
+    finally:
+        unsubscribe_feed(contract)
+        current_price = None
 
 # Main execution
 if __name__ == "__main__":
