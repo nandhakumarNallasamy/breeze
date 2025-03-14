@@ -5,6 +5,8 @@ import pytz
 from IPython.display import clear_output
 import os
 import threading
+from time import sleep
+from concurrent.futures import ThreadPoolExecutor
 
 def get_ist_time():
     # Get IST
@@ -103,11 +105,14 @@ def create_date(date, month):
     # Format the datetime as a string
     return dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
         
-def get_current_expiry():
+def get_current_expiry(target_weekday):
+    #Get the date of the current or next occurrence of the specified weekday.
+    # 0-Monday, 1-Tuesday, 2-Wednesday,..., 6-Sunday
     today = datetime.now(pytz.timezone('Asia/Kolkata'))
-    days_ahead = (2 - today.weekday()) % 7  # 2 represents Wednesday
-    wednesday = today + timedelta(days = days_ahead)
-    return wednesday.strftime("%Y-%m-%dT06:00:00.000Z")
+    days_ahead = (target_weekday - today.weekday()) % 7  
+    weekday = today + timedelta(days = days_ahead)
+    print(weekday)
+    return weekday.strftime("%Y-%m-%dT06:00:00.000Z")
 
 class contract:
     def __init__(self, stock_code, exchange_code, product_type, expiry_date, right="others", strike_price="0"):
@@ -372,9 +377,5 @@ if __name__ == "__main__":
     
     # Initialize BreezeConnect
     breeze = connect()
-    
-    # Get current ISO date
-    current_date = get_iso_date(get_ist_time())
-    CURRENT_EXPIRY = get_current_expiry()
 
     
