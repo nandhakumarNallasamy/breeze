@@ -463,7 +463,7 @@ def generate_contracts(stock_code, expiry_date, start_strike, end_strike, interv
         globals()[f"{stock_code}{strike}PE{keyword if keyword else ''}"] = put_contract
         contracts.append(put_contract)
             
-        print(f"ℹ️ {f"{stock_code}{strike}CE{keyword if keyword else ''}"}, {f"{stock_code}{strike}PE{keyword if keyword else ''}"} generated.")
+        print(f"ℹ️ {stock_code}{strike}CE{keyword if keyword else ''}, {stock_code}{strike}PE{keyword if keyword else ''} generated.")
         
     return contracts
 
