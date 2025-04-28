@@ -1,2 +1,2 @@
 # breeze
-ICICI Direcr - breeze api
+ICICI Direct - breeze api
