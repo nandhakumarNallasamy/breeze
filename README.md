@@ -20,6 +20,6 @@ Tech Stack
 
 Python, pandas, NumPy, WebSocket APIs, REST APIs
 
-## Disclaimer
+Disclaimer
 
 This project was connected to my personal ICICI Direct brokerage account and used for live automated trading with real capital. It is no longer in active use. It was built as a personal project to explore real-time financial data systems, automated execution, and systematic risk controls.
