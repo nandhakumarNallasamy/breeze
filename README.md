@@ -20,10 +20,6 @@ Tech Stack
 
 Python, pandas, NumPy, WebSocket APIs, REST APIs
 
-Disclaimer
-
-This is a personal, educational project built to explore real-time financial data systems and is not used for live/funded trading. It is intended to demonstrate data engineering, API integration, and systematic process design.
-
 Status
 
 Actively maintained as a learning project.
