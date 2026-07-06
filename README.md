@@ -1,25 +1,19 @@
-Breeze — Automated Market Data & Reporting System
+# Breeze — Real-Time Market Data & Order Execution System
 
-A Python-based system built on ICICI Direct's Breeze API for ingesting real-time market data, processing it into structured, actionable signals, and automating reporting and risk controls.
+A Python-based system for real-time market data ingestion, structured contract/order management, and automated order execution via a brokerage's WebSocket and REST APIs.
 
-Overview
+## Overview
 
-This project focuses on the data engineering and operational side of financial systems: reliable real-time data ingestion, automated reconciliation-style processing, and risk-aware execution controls — the same core skills used in trade support, settlement, and post-trade operations roles.
+This project explores the core engineering challenges behind live market data systems: maintaining a resilient real-time data feed, structuring incoming data for fast lookup, and executing orders reliably and concurrently.
 
-Key Components
+## Key Components
 
+- **Real-time data ingestion**: WebSocket-based connection for continuous streaming of tick, OHLCV, and market depth data, with reconnection and error-handling logic to keep the feed resilient.
+- **Contract registry**: Structured mapping of instrument tokens to option and futures contracts for fast, consistent lookup across the system.
+- **Multi-threaded order execution**: Concurrent order placement using a thread pool executor to handle multiple orders efficiently without blocking the data feed.
+- **Options chain analysis**: Logic to scan a live options chain and identify near-the-money call/put pairs based on price proximity.
+- **REST API integration**: Handles authentication, session management, and order-related API calls.
 
-Real-time data ingestion: WebSocket-based connection to the Breeze API for continuous market data streaming, with reconnection and error-handling logic to keep the pipeline resilient.
-Data processing pipeline: Structures incoming tick data into clean, queryable formats for downstream analysis and reporting.
-Automated reporting: Generates position, P&L, and performance summaries on a scheduled basis, reducing manual reconciliation work.
-Risk controls: Implements configurable position sizing and automated stop-loss/exit logic to enforce risk limits systematically rather than manually.
-REST API integration: Handles authentication, session management, and order-related calls against the Breeze API.
+## Tech Stack
 
-
-Tech Stack
-
-Python, pandas, NumPy, WebSocket APIs, REST APIs
-
-Disclaimer
-
-This project was connected to my personal ICICI Direct brokerage account and used for live automated trading with real capital. It is no longer in active use. It was built as a personal project to explore real-time financial data systems, automated execution, and systematic risk controls.
+Python, WebSocket APIs, REST APIs, multi-threading (ThreadPoolExecutor)
