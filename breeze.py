@@ -699,7 +699,7 @@ def clear():
 def place_fno_order(contract, action, quantity, count=1, price="0", stoploss="0", timeout=10):
     # Place F&O order(s) using ThreadPoolExecutor - simple and clean"""
     if action == "buy" and count*quantity > 4000:
-        print("Fuck off!")
+        print("Maximum order limit exceeded")
         return
     
     order_params = {
